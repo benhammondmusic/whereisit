@@ -1,0 +1,32 @@
+{
+  "name": "whereisit",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n web,api -c blue,green \"vite\" \"npm run dev:api\"",
+    "dev:api": "mkdir -p dist && wrangler pages dev --port 8788",
+    "build": "tsc -b && tsc -p functions && vite build",
+    "lint": "oxlint",
+    "preview": "npm run build && wrangler pages dev",
+    "db:migrate:local": "wrangler d1 migrations apply whereisit --local",
+    "db:migrate:remote": "wrangler d1 migrations apply whereisit --remote",
+    "deploy": "npm run build && wrangler pages deploy"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261016.1",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.6",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "wrangler": "^4.151.1"
+  }
+}

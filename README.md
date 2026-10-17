@@ -16,6 +16,38 @@ Early planning. Spec coming soon.
 
 All of the above fits within Cloudflare's free tier.
 
+## Development
+
+```sh
+npm install
+cp .dev.vars.example .dev.vars   # sets APP_PASSWORD for local dev
+npm run db:migrate:local
+npm run dev                      # Vite on :5173, API on :8788
+```
+
+## Deploy (first time)
+
+```sh
+npx wrangler login
+npx wrangler d1 create whereisit     # paste the database_id into wrangler.toml
+npm run db:migrate:remote
+npx wrangler pages project create whereisit
+npx wrangler pages secret put APP_PASSWORD --project-name whereisit
+npm run deploy
+```
+
+## API
+
+All routes require `Authorization: Bearer <APP_PASSWORD>`.
+
+| Method | Path              | Notes                                         |
+| ------ | ----------------- | --------------------------------------------- |
+| GET    | `/api/things`     | All things                                    |
+| POST   | `/api/things`     | `{ name, parentId?, notes?, tags? }`          |
+| GET    | `/api/things/:id` |                                               |
+| PATCH  | `/api/things/:id` | Any subset of fields; blocks moving into self |
+| DELETE | `/api/things/:id` | Contents move up to the deleted thing's parent |
+
 ## Data model
 
 Everything is a single `Thing`. Anything can contain other things and be contained by something else (e.g. a suitcase holds clothes and sits on a garage attic shelf).
