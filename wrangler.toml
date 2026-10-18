@@ -5,8 +5,7 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "whereisit"
-# Replace with the id from `npx wrangler d1 create whereisit`
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "05a32e6a-0e99-4d39-8d6e-d564d1d5c295"
 migrations_dir = "migrations"
 
 # Photos. Create with `npx wrangler r2 bucket create whereisit-photos` before first deploy.
