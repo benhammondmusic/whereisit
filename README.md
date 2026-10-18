@@ -25,7 +25,13 @@ npm run db:migrate:local
 npm run dev                      # Vite on :5173, API on :8788
 ```
 
-## Deploy (first time)
+## Deploy
+
+Every push to `main` builds, applies D1 migrations, and deploys via GitHub Actions (`.github/workflows/deploy.yml`). Needs repo secrets `CLOUDFLARE_API_TOKEN` (Pages: Edit, D1: Edit) and `CLOUDFLARE_ACCOUNT_ID`. `npm run deploy` still works for a manual deploy.
+
+Live at https://whereisit-82h.pages.dev
+
+### First-time setup (already done)
 
 ```sh
 npx wrangler login
