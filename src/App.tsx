@@ -1,30 +1,41 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { api, clearPassword, getPassword, pathOf, setPassword, UnauthorizedError } from './api'
+import { api, clearLogin, getPassword, getUser, pathOf, saveLogin, UnauthorizedError } from './api'
+import ThingSheet, { type SheetMode } from './components/ThingSheet'
+import Tree from './components/Tree'
+import { describeReplaceBy, isReplaceSoon, today } from './dates'
+import { search } from './search'
 import type { Thing } from './types'
 import './App.css'
 
+const locationOf = (thing: Thing, byId: Map<string, Thing>) => {
+  const parent = thing.parentId ? byId.get(thing.parentId) : undefined
+  return parent ? pathOf(parent, byId) : 'Top level'
+}
+
 export default function App() {
-  const [authed, setAuthed] = useState(Boolean(getPassword()))
+  const [authed, setAuthed] = useState(Boolean(getPassword() && getUser()))
   const logout = useCallback(() => {
-    clearPassword()
+    clearLogin()
     setAuthed(false)
   }, [])
   return authed ? <Home onLogout={logout} /> : <Login onLogin={() => setAuthed(true)} />
 }
 
 function Login({ onLogin }: { onLogin: () => void }) {
-  const [value, setValue] = useState('')
+  const [password, setPassword] = useState('')
+  const [user, setUser] = useState(getUser() ?? '')
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    setPassword(value)
+    saveLogin(password, user.trim())
     onLogin()
   }
   return (
     <main className="login">
       <h1>Where Is It</h1>
       <form onSubmit={submit}>
-        <input type="password" placeholder="Password" value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
-        <button type="submit">Enter</button>
+        <input placeholder="Your name" value={user} onChange={(e) => setUser(e.target.value)} required autoFocus={!user} />
+        <input type="password" placeholder="Household password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus={Boolean(user)} />
+        <button type="submit" className="primary">Enter</button>
       </form>
     </main>
   )
@@ -32,8 +43,15 @@ function Login({ onLogin }: { onLogin: () => void }) {
 
 function Home({ onLogout }: { onLogout: () => void }) {
   const [things, setThings] = useState<Thing[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [sheet, setSheet] = useState<SheetMode | null>(null)
+
+  const fail = useCallback(
+    (e: unknown) => (e instanceof UnauthorizedError ? onLogout() : setError((e as Error).message)),
+    [onLogout],
+  )
 
   const run = useCallback(
     async (fn: () => Promise<unknown>) => {
@@ -41,17 +59,18 @@ function Home({ onLogout }: { onLogout: () => void }) {
         await fn()
         setThings(await api.list())
         setError(null)
+        return true
       } catch (e) {
-        if (e instanceof UnauthorizedError) onLogout()
-        else setError((e as Error).message)
+        fail(e)
+        return false
       }
     },
-    [onLogout],
+    [fail],
   )
 
   useEffect(() => {
-    api.list().then(setThings, (e) => (e instanceof UnauthorizedError ? onLogout() : setError(e.message)))
-  }, [onLogout])
+    api.list().then(setThings, fail).finally(() => setLoaded(true))
+  }, [fail])
 
   const byId = useMemo(() => new Map(things.map((t) => [t.id, t])), [things])
   const childrenOf = useMemo(() => {
@@ -63,95 +82,82 @@ function Home({ onLogout }: { onLogout: () => void }) {
     return map
   }, [things, byId])
 
-  const matches = query.trim()
-    ? things.filter((t) => t.name.toLowerCase().includes(query.trim().toLowerCase()))
-    : null
+  const results = useMemo(() => (query.trim() ? search(query, things, byId) : null), [query, things, byId])
+  const replaceSoon = useMemo(
+    () => things.filter((t) => isReplaceSoon(t.replaceBy)).sort((a, b) => a.replaceBy!.localeCompare(b.replaceBy!)),
+    [things],
+  )
+
+  const open = (thing: Thing) => setSheet({ kind: 'edit', thing })
 
   return (
     <main>
       <header>
         <h1>Where Is It</h1>
-        <button className="link" onClick={onLogout}>Log out</button>
+        <span className="muted">
+          {getUser()} · <button className="link inline" onClick={onLogout}>Log out</button>
+        </span>
       </header>
 
       <input className="search" type="search" placeholder="Find something…" value={query} onChange={(e) => setQuery(e.target.value)} />
 
       {error && <p className="error">{error}</p>}
 
-      {matches ? (
+      {results ? (
         <ul className="results">
-          {matches.map((t) => (
-            <li key={t.id}>{pathOf(t, byId)}</li>
+          {results.map(({ thing }) => (
+            <li key={thing.id}>
+              <button onClick={() => open(thing)}>
+                <strong>{thing.name}</strong>
+                <span className="muted">{locationOf(thing, byId)}</span>
+              </button>
+            </li>
           ))}
-          {matches.length === 0 && <li className="muted">Nothing found</li>}
+          {results.length === 0 && <li className="muted empty">Nothing found</li>}
         </ul>
       ) : (
         <>
-          <AddForm things={things} byId={byId} onAdd={(name, parentId) => run(() => api.create({ name, parentId }))} />
-          <Tree parentId={null} childrenOf={childrenOf} onDelete={(id) => run(() => api.remove(id))} />
+          {replaceSoon.length > 0 && (
+            <section className="soon">
+              <h2>Replacing soon</h2>
+              <ul>
+                {replaceSoon.map((t) => (
+                  <li key={t.id}>
+                    <button onClick={() => open(t)}>
+                      <strong>{t.name}</strong>
+                      <span className="muted">{locationOf(t, byId)}</span>
+                      <span className={t.replaceBy! < today() ? 'error' : 'muted'}>{describeReplaceBy(t.replaceBy!)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {loaded && things.length === 0 && (
+            <p className="muted empty">Nothing here yet. Tap + to add a room, like “Garage” or “Kitchen”.</p>
+          )}
+          <Tree
+            parentId={null}
+            childrenOf={childrenOf}
+            onOpen={open}
+            onAddInside={(parentId) => setSheet({ kind: 'new', parentId })}
+          />
         </>
       )}
+
+      <button className="fab" onClick={() => setSheet({ kind: 'new', parentId: null })} aria-label="Add something">+</button>
+
+      {sheet && (
+        <ThingSheet
+          key={sheet.kind === 'edit' ? sheet.thing.id : 'new:' + sheet.parentId}
+          mode={sheet}
+          things={things}
+          byId={byId}
+          run={run}
+          onClose={() => setSheet(null)}
+          onOpen={open}
+        />
+      )}
     </main>
-  )
-}
-
-function AddForm({
-  things,
-  byId,
-  onAdd,
-}: {
-  things: Thing[]
-  byId: Map<string, Thing>
-  onAdd: (name: string, parentId: string | null) => void
-}) {
-  const [name, setName] = useState('')
-  const [parentId, setParentId] = useState('')
-  const options = useMemo(
-    () => things.map((t) => ({ id: t.id, label: pathOf(t, byId) })).sort((a, b) => a.label.localeCompare(b.label)),
-    [things, byId],
-  )
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
-    onAdd(name.trim(), parentId || null)
-    setName('')
-  }
-  return (
-    <form className="add" onSubmit={submit}>
-      <input placeholder="New thing" value={name} onChange={(e) => setName(e.target.value)} />
-      <select value={parentId} onChange={(e) => setParentId(e.target.value)}>
-        <option value="">(top level)</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>{o.label}</option>
-        ))}
-      </select>
-      <button type="submit">Add</button>
-    </form>
-  )
-}
-
-function Tree({
-  parentId,
-  childrenOf,
-  onDelete,
-}: {
-  parentId: string | null
-  childrenOf: Map<string | null, Thing[]>
-  onDelete: (id: string) => void
-}) {
-  const kids = childrenOf.get(parentId)
-  if (!kids?.length) return parentId === null ? <p className="muted">Nothing here yet. Add a room to start.</p> : null
-  return (
-    <ul className="tree">
-      {kids.map((t) => (
-        <li key={t.id}>
-          <div className="row">
-            <span>{t.name}</span>
-            <button className="link" onClick={() => onDelete(t.id)} aria-label={`Delete ${t.name}`}>✕</button>
-          </div>
-          <Tree parentId={t.id} childrenOf={childrenOf} onDelete={onDelete} />
-        </li>
-      ))}
-    </ul>
   )
 }
