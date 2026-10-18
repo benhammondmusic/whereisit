@@ -200,7 +200,7 @@ export default function ThingSheet({ mode, things, byId, run, onClose, onOpen }:
           <>
             {children.length > 0 && (
               <section>
-                <h3>Inside ({children.length})</h3>
+                <h3>Contains ({children.length})</h3>
                 <ul className="chips">
                   {children.map((c) => (
                     <li key={c.id}>

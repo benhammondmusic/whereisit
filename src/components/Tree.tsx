@@ -27,23 +27,56 @@ function Node({ thing, ...props }: Omit<Props, 'parentId'> & { thing: Thing }) {
   return (
     <li>
       <div className="row">
+        {/* Tapping a container expands it; tapping a plain item opens it for editing. */}
         <button
-          className="caret"
-          onClick={() => setOpen(!open)}
-          aria-label={open ? `Collapse ${thing.name}` : `Expand ${thing.name}`}
-          aria-expanded={open}
-          disabled={!count}
+          className="name"
+          onClick={() => (count ? setOpen(!open) : props.onOpen(thing))}
+          aria-expanded={count ? open : undefined}
         >
-          {count ? (open ? '▾' : '▸') : ''}
-        </button>
-        <button className="name" onClick={() => props.onOpen(thing)}>
+          <span className="caret" aria-hidden>{count ? (open ? '▾' : '▸') : ''}</span>
           {thing.name}
           {count > 0 && <span className="count">{count}</span>}
           {isReplaceSoon(thing.replaceBy) && <span className="badge" title="Replacing soon">⏳</span>}
         </button>
-        <button className="link add-inside" onClick={() => props.onAddInside(thing.id)} aria-label={`Add inside ${thing.name}`}>+</button>
+        <button className="icon" onClick={() => props.onAddInside(thing.id)} aria-label={`Add something to ${thing.name}`} title="Add something to this">
+          <AddWithinIcon />
+        </button>
+        <button className="icon" onClick={() => props.onOpen(thing)} aria-label={`Edit ${thing.name}`} title="Edit">
+          <EditIcon />
+        </button>
       </div>
       {open && <Tree parentId={thing.id} {...props} />}
     </li>
+  )
+}
+
+const iconProps = {
+  width: 20,
+  height: 20,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const
+
+/** A box with a plus inside it. */
+function AddWithinIcon() {
+  return (
+    <svg {...iconProps} aria-hidden>
+      <path d="M3 8l2-4h14l2 4" />
+      <rect x="3" y="8" width="18" height="12" rx="1" />
+      <path d="M12 11v6M9 14h6" />
+    </svg>
+  )
+}
+
+function EditIcon() {
+  return (
+    <svg {...iconProps} aria-hidden>
+      <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z" />
+      <path d="M13.5 6.5l4 4" />
+    </svg>
   )
 }
