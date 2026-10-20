@@ -3,12 +3,12 @@ import type { Thing, ThingEvent, ThingInput } from '../../src/types'
 export interface Env {
   DB: D1Database
   PHOTOS?: R2Bucket
-  APP_PASSWORD?: string
+  USER_CODES?: string
 }
 
-/** Set by the auth middleware from the X-User header. */
+/** Set by the auth middleware from the door code. */
 export interface Data extends Record<string, unknown> {
-  user: string | null
+  user: string
 }
 
 interface ThingRow {

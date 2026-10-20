@@ -1,22 +1,29 @@
 import type { Thing, ThingEvent, ThingInput } from './types'
 
-const PASSWORD_KEY = 'whereisit.password'
+const CODE_KEY = 'whereisit.code'
 const USER_KEY = 'whereisit.user'
 
-export const getPassword = () => localStorage.getItem(PASSWORD_KEY)
+export const getCode = () => localStorage.getItem(CODE_KEY)
 export const getUser = () => localStorage.getItem(USER_KEY)
-export const saveLogin = (password: string, user: string) => {
-  localStorage.setItem(PASSWORD_KEY, password)
-  localStorage.setItem(USER_KEY, user)
+export const clearLogin = () => {
+  localStorage.removeItem(CODE_KEY)
+  localStorage.removeItem(USER_KEY)
 }
-export const clearLogin = () => localStorage.removeItem(PASSWORD_KEY)
 
 export class UnauthorizedError extends Error {}
 
-const authHeaders = () => ({
-  Authorization: `Bearer ${getPassword() ?? ''}`,
-  'X-User': getUser() ?? '',
-})
+const authHeaders = (code = getCode()) => ({ Authorization: `Bearer ${code ?? ''}` })
+
+/** Checks a door code. Returns the user's name, or null if wrong; throws on lockout or network trouble. */
+export async function login(code: string): Promise<string | null> {
+  const res = await fetch('/api/me', { headers: authHeaders(code) })
+  if (res.status === 401) return null
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? res.statusText)
+  const { user } = await res.json()
+  localStorage.setItem(CODE_KEY, code)
+  localStorage.setItem(USER_KEY, user)
+  return user
+}
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`/api${path}`, {

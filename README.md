@@ -12,7 +12,7 @@ Early planning. Spec coming soon.
 - **Hosting & API:** Cloudflare Pages + Workers (Pages Functions).
 - **Database:** Cloudflare D1 (SQLite).
 - **Photos:** Cloudflare R2, compressed client-side before upload.
-- **Auth:** simple shared password to start.
+- **Auth:** door-code keypad; each person has their own code, which also records who made each change.
 
 All of the above fits within Cloudflare's free tier.
 
@@ -20,7 +20,7 @@ All of the above fits within Cloudflare's free tier.
 
 ```sh
 npm install
-cp .dev.vars.example .dev.vars   # sets APP_PASSWORD for local dev
+cp .dev.vars.example .dev.vars   # then set USER_CODES (door codes) for local dev
 npm run db:migrate:local
 npm run dev                      # Vite on :5173, API on :8788
 ```
@@ -39,13 +39,13 @@ npx wrangler d1 create whereisit     # paste the database_id into wrangler.toml
 npm run db:migrate:remote
 npx wrangler r2 bucket create whereisit-photos
 npx wrangler pages project create whereisit
-npx wrangler pages secret put APP_PASSWORD --project-name whereisit
+npx wrangler pages secret put USER_CODES --project-name whereisit   # "code:Name,code:Name"
 npm run deploy
 ```
 
 ## API
 
-All routes require `Authorization: Bearer <APP_PASSWORD>`. `X-User: <name>` records who made a change.
+All routes require `Authorization: Bearer <door code>`; the code identifies the user. `GET /api/me` returns `{ user }`. 20 wrong codes from one IP in 15 minutes locks it out.
 
 | Method | Path                     | Notes                                                                  |
 | ------ | ------------------------ | ---------------------------------------------------------------------- |

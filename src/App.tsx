@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { api, clearLogin, getPassword, getUser, pathOf, saveLogin, UnauthorizedError } from './api'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { api, clearLogin, getCode, getUser, pathOf, UnauthorizedError } from './api'
+import Keypad from './components/Keypad'
 import ThingSheet, { type SheetMode } from './components/ThingSheet'
 import Tree from './components/Tree'
 import { describeReplaceBy, isReplaceSoon, today } from './dates'
@@ -13,32 +14,12 @@ const locationOf = (thing: Thing, byId: Map<string, Thing>) => {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(Boolean(getPassword() && getUser()))
+  const [authed, setAuthed] = useState(Boolean(getCode() && getUser()))
   const logout = useCallback(() => {
     clearLogin()
     setAuthed(false)
   }, [])
-  return authed ? <Home onLogout={logout} /> : <Login onLogin={() => setAuthed(true)} />
-}
-
-function Login({ onLogin }: { onLogin: () => void }) {
-  const [password, setPassword] = useState('')
-  const [user, setUser] = useState(getUser() ?? '')
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    saveLogin(password, user.trim())
-    onLogin()
-  }
-  return (
-    <main className="login">
-      <h1>Where Is It</h1>
-      <form onSubmit={submit}>
-        <input placeholder="Your name" value={user} onChange={(e) => setUser(e.target.value)} required autoFocus={!user} />
-        <input type="password" placeholder="Household password" value={password} onChange={(e) => setPassword(e.target.value)} required autoFocus={Boolean(user)} />
-        <button type="submit" className="primary">Enter</button>
-      </form>
-    </main>
-  )
+  return authed ? <Home onLogout={logout} /> : <Keypad onLogin={() => setAuthed(true)} />
 }
 
 function Home({ onLogout }: { onLogout: () => void }) {

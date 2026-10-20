@@ -42,17 +42,86 @@ h3 {
   text-align: center;
 }
 
-/* Login */
+/* Door-code keypad */
 
-.login {
-  max-width: 22rem;
-  padding-top: 18vh;
-}
-
-.login form {
+.keypad-screen {
+  max-width: 20rem;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 2rem;
+}
+
+.code-dots {
+  display: flex;
+  gap: 0.9rem;
+  margin: 1.5rem 0 0.5rem;
+  min-height: 1rem;
+}
+
+.code-dots span {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  border: 2px solid var(--muted);
+}
+
+.code-dots span.filled {
+  background: var(--fg);
+  border-color: var(--fg);
+}
+
+.code-dots.shake {
+  animation: shake 0.4s;
+}
+
+@keyframes shake {
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.keypad-message {
+  color: var(--danger);
+  margin: 0 0 1rem;
+  min-height: 1.5em;
+  text-align: center;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 4.75rem);
+  gap: 1rem;
+}
+
+.keypad .key {
+  width: 4.75rem;
+  height: 4.75rem;
+  border-radius: 50%;
+  font-size: 1.75rem;
+  font-weight: 500;
+  padding: 0;
+  background: var(--surface);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.keypad .key:active:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.keypad .key.back {
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  color: var(--muted);
+}
+
+.keypad .key.enter {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
 }
 
 /* Search */

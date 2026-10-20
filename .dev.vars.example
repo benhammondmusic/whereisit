@@ -1,1 +1,2 @@
-APP_PASSWORD=change-me
+# Door codes, "code:Name" pairs. Real codes live only in Cloudflare secrets.
+USER_CODES=1234:Ben,567890:Julie
